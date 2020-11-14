@@ -1,6 +1,8 @@
-PROJECT_ID=devops-directive-storybooks
+PROJECT_ID=storybook-295005
 ZONE=us-central1-a
 
+CONTAINER_NAME=storybooks-api
+DB_NAME=storybooks
 run-local:
 	docker-compose up 
 
@@ -9,32 +11,26 @@ run-local:
 create-tf-backend-bucket:
 	gsutil mb -p $(PROJECT_ID) gs://$(PROJECT_ID)-terraform
 
-### 
+###
 
-check-env:
-ifndef ENV
-	$(error Please set ENV=[staging|prod])
-endif
-
-# This cannot be indented or else make will include spaces in front of secret
 define get-secret
 $(shell gcloud secrets versions access latest --secret=$(1) --project=$(PROJECT_ID))
 endef
 
 ###
 
-terraform-create-workspace: check-env
-	cd terraform && \
-		terraform workspace new $(ENV)
+ENV=staging
 
-terraform-init: check-env
+terraform-create-workspace:
 	cd terraform && \
-		terraform workspace select $(ENV) && \
-		terraform init
+	terraform workspace new $(ENV)
+
+terraform-init:
+	cd terraform && terraform workspace select $(ENV) && terraform init
 
 TF_ACTION?=plan
-terraform-action: check-env
-	@cd terraform && \
+terraform-action:
+	cd terraform && \
 		terraform workspace select $(ENV) && \
 		terraform $(TF_ACTION) \
 		-var-file="./environments/common.tfvars" \
@@ -45,35 +41,31 @@ terraform-action: check-env
 
 ###
 
-SSH_STRING=palas@storybooks-vm-$(ENV)
-OAUTH_CLIENT_ID=542106262510-8ki8hqgu7kmj2b3arjdqvcth3959kmmv.apps.googleusercontent.com
+SSH_STRING=hello@storybooks-vm-$(ENV)
 
 GITHUB_SHA?=latest
 LOCAL_TAG=storybooks-app:$(GITHUB_SHA)
 REMOTE_TAG=gcr.io/$(PROJECT_ID)/$(LOCAL_TAG)
 
-CONTAINER_NAME=storybooks-api
-DB_NAME=storybooks
+ssh:
+	@gcloud compute ssh $(SSH_STRING)  \
+	--project=$(PROJECT_ID) \
+	--zone=$(ZONE) 
 
-ssh: check-env
-	gcloud compute ssh $(SSH_STRING) \
-		--project=$(PROJECT_ID) \
-		--zone=$(ZONE)
+ssh-cmd:
+	gcloud compute ssh $(SSH_STRING)  \
+	--project=$(PROJECT_ID) \
+	--zone=$(ZONE) \
+	--command="$(CMD)"
 
-ssh-cmd: check-env
-	@gcloud compute ssh $(SSH_STRING) \
-		--project=$(PROJECT_ID) \
-		--zone=$(ZONE) \
-		--command="$(CMD)"
-
-build:
+build: 
 	docker build -t $(LOCAL_TAG) .
 
 push:
 	docker tag $(LOCAL_TAG) $(REMOTE_TAG)
 	docker push $(REMOTE_TAG)
 
-deploy: check-env
+deploy:
 	$(MAKE) ssh-cmd CMD='docker-credential-gcr configure-docker'
 	@echo "pulling new container image..."
 	$(MAKE) ssh-cmd CMD='docker pull $(REMOTE_TAG)'
@@ -86,8 +78,8 @@ deploy: check-env
 			--restart=unless-stopped \
 			-p 80:3000 \
 			-e PORT=3000 \
-			-e \"MONGO_URI=mongodb+srv://storybooks-user-$(ENV):$(call get-secret,atlas_user_password_$(ENV))@storybooks-$(ENV).kkwmy.mongodb.net/$(DB_NAME)?retryWrites=true&w=majority\" \
-			-e GOOGLE_CLIENT_ID=$(OAUTH_CLIENT_ID) \
-			-e GOOGLE_CLIENT_SECRET=$(call get-secret,google_oauth_client_secret) \
+			-e \"MONGO_URI=mongodb+srv://storybooks-user-$(ENV):$(call get-secret,atlas_user_password_$(ENV))@storybooks-$(ENV).8cg1g.mongodb.net/$(DB_NAME)?retryWrites=true&w=majority\" \
+			-e GOOGLE_CLIENT_ID=1064198404056-o6v49dt6bpkmbmv67eaj0gimo3dt9gip.apps.googleusercontent.com \
+			-e GOOGLE_CLIENT_SECRET=_$(call get-secret,google_oauth_client_secret) \
 			$(REMOTE_TAG) \
 			'

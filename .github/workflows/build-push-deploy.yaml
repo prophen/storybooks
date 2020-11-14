@@ -9,7 +9,7 @@ on:
       - v\d+\.\d+\.\d+
 
 env:
-  PROJECT_ID: devops-directive-storybooks
+  PROJECT_ID: storybook-295005
 
 jobs:
   setup-build-publish-deploy:

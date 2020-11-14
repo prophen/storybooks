@@ -1,8 +1,9 @@
 app_name="storybooks"
 
-gcp_project_id="devops-directive-storybooks"
+mongodbatlas_public_key="gktqybcw"
 
-atlas_project_id = "5f5bdb70abbd5840ca911a50"
-mongodbatlas_public_key="npxnkjot"
+atlas_project_id = "5facbac1ed36364b1b72cc06"
+domain="bloop.rocks"
 
-domain="devopsdirective.com"
+gcp_project_id = "storybook-295005"
+
